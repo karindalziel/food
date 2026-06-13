@@ -1,4 +1,5 @@
 <?php
+// setup.php — First-run USDA API key setup. Skippable; key can also be added later in Settings.
 declare(strict_types=1);
 
 $config_path = __DIR__ . '/data/config.php';

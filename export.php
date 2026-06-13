@@ -1,4 +1,5 @@
 <?php
+// export.php — Streams meal data as a CSV file. Optional ?start= and ?end= date filters.
 declare(strict_types=1);
 session_start();
 require_once __DIR__ . '/db.php';

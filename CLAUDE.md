@@ -1,7 +1,7 @@
 # Food Tracking App Instructions
 
 ## About
-Build almost entirely using Claude Code, no warrenty expressed or implied.
+Built almost entirely using Claude Code, no warrenty expressed or implied.
 
 ## Airtable
 Airtable access token is in the file airtable.txt, along with the base name

@@ -1,4 +1,5 @@
 <?php
+// import.php — CSV import with dry-run preview. Accepts the same format as export.php.
 declare(strict_types=1);
 session_start();
 require_once __DIR__ . '/db.php';
@@ -83,6 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // ── Step 1: Derive base food nutrition values ───────────────────────
         // For each food name, collect per-serving values from every row it appears in
         // (value / portion_multiplier) then average them.
+        // Averaging handles cases where the same food was logged with slightly different
+        // values across entries (e.g. different brands, rounding variation).
         $food_data = []; // keyed by lowercase food name
         foreach ($rows as $row) {
             $name    = trim($row[COL_FOOD]);
@@ -167,6 +170,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // ── Step 3: Group rows into meals ────────────────────────────────────
+        // The key "date|time|notes" reconstructs logical meals from flat CSV rows —
+        // rows that share the same date, time, and notes were part of one meal.
         $meal_groups = []; // keyed by "date|time|notes"
         foreach ($rows as $row) {
             $date  = trim($row[COL_DATE]);

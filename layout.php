@@ -1,4 +1,5 @@
 <?php
+// layout.php — Shared HTML shell: page_header(), page_footer(), and goal_bar() functions.
 function page_header(string $title, string $active = ''): void {
     $person = get_active_person();
     $db = get_db();

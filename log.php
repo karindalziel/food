@@ -1,4 +1,5 @@
 <?php
+// log.php — Meal entry and edit form with food search, template loader, and planned-meal detection.
 declare(strict_types=1);
 session_start();
 require_once __DIR__ . '/db.php';
@@ -49,6 +50,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    if ($action === 'unplan' && $edit_id) {
+        $db->prepare('UPDATE meals SET is_planned = 0 WHERE id = ? AND person_id = ?')
+           ->execute([$edit_id, $person['id']]);
+        header('Location: log.php?edit=' . $edit_id . u_amp());
+        exit;
+    }
+
     if ($action === 'save') {
         $eaten_at_raw   = trim($_POST['eaten_at'] ?? '');
         $notes          = trim($_POST['notes'] ?? '');
@@ -56,12 +64,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $portions       = $_POST['portion'] ?? [];
         $save_template  = !empty($_POST['save_as_template']);
         $template_name  = trim($_POST['template_name'] ?? '');
+        $browser_now_raw = trim($_POST['browser_now'] ?? '');
 
         $dt = $eaten_at_raw ? DateTime::createFromFormat('Y-m-d\TH:i', $eaten_at_raw) : false;
         if (!$dt) {
             $errors[] = 'Date and time are required.';
         }
         $eaten_at = $dt ? $dt->format('Y-m-d H:i:s') : '';
+
+        // Determine planned status by comparing to browser's current time
+        $is_planned = 0;
+        if ($dt) {
+            $now_dt = DateTime::createFromFormat('Y-m-d\TH:i', $browser_now_raw) ?: new DateTime();
+            $is_planned = $dt > $now_dt ? 1 : 0;
+        }
 
         $valid_items = [];
         foreach ($food_ids as $i => $fid) {
@@ -74,13 +90,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($errors)) {
             if ($edit_id) {
-                $db->prepare('UPDATE meals SET eaten_at = ?, notes = ? WHERE id = ? AND person_id = ?')
-                   ->execute([$eaten_at, $notes ?: null, $edit_id, $person['id']]);
+                $db->prepare('UPDATE meals SET eaten_at = ?, notes = ?, is_planned = ? WHERE id = ? AND person_id = ?')
+                   ->execute([$eaten_at, $notes ?: null, $is_planned, $edit_id, $person['id']]);
+                // Delete all items then re-insert: simpler than diffing, and items have no identity worth preserving.
                 $db->prepare('DELETE FROM meal_items WHERE meal_id = ?')->execute([$edit_id]);
                 $meal_id = $edit_id;
             } else {
-                $db->prepare('INSERT INTO meals (person_id, eaten_at, notes) VALUES (?, ?, ?)')
-                   ->execute([$person['id'], $eaten_at, $notes ?: null]);
+                $db->prepare('INSERT INTO meals (person_id, eaten_at, notes, is_planned) VALUES (?, ?, ?, ?)')
+                   ->execute([$person['id'], $eaten_at, $notes ?: null, $is_planned]);
                 $meal_id = (int)$db->lastInsertId();
             }
 
@@ -128,26 +145,45 @@ page_header($edit_id ? 'Edit Meal' : 'Log Meal', 'log');
     </div>
 </div>
 
+<?php if ($edit_id && !empty($meal['is_planned'])): ?>
+<div class="alert" style="background:var(--planned-bg);color:var(--planned-color);display:flex;align-items:center;justify-content:space-between;gap:12px">
+    <span>📅 This is a planned meal.</span>
+    <form method="post" style="margin:0">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="unplan">
+        <button type="submit" class="btn btn-sm" style="background:#1a5276;color:#fff;white-space:nowrap">Mark as eaten</button>
+    </form>
+</div>
+<?php endif; ?>
+
 <form method="post" id="meal-form">
     <input type="hidden" name="action" value="save">
+    <input type="hidden" name="browser_now" id="browser_now">
+    <?php /* browser_now is set by JS and compared to eaten_at in PHP to detect future meals.
+             The server runs UTC; browser time is the only reliable source for the user's local timezone. */ ?>
     <?= csrf_field() ?>
 
     <div class="card">
         <h2><?= $edit_id ? 'Edit Meal' : 'Log a Meal' ?></h2>
+        <div id="planned-notice" style="display:none;background:var(--planned-bg);color:var(--planned-color);border-radius:8px;padding:8px 12px;font-size:.85rem;margin-bottom:12px">
+            📅 This meal is in the future and will be marked as <strong>planned</strong>.
+        </div>
         <div class="form-group">
             <label for="eaten_at">Date &amp; Time</label>
             <input type="datetime-local" id="eaten_at" name="eaten_at"
                    value="<?= htmlspecialchars($default_dt) ?>" required>
-            <?php if (!$edit_id): ?>
             <script>
             (function() {
                 const now = new Date();
                 const pad = n => String(n).padStart(2, '0');
-                document.getElementById('eaten_at').value =
-                    `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+                const nowStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+                document.getElementById('browser_now').value = nowStr;
+                <?php if (!$edit_id): ?>
+                document.getElementById('eaten_at').value = nowStr;
+                <?php endif; ?>
+                initPlannedNotice(nowStr);
             })();
             </script>
-            <?php endif; ?>
         </div>
         <div class="form-group">
             <label for="notes">Notes (optional)</label>

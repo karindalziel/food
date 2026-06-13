@@ -1,5 +1,5 @@
 <?php
-// Shared food form fields partial.
+// _food_form_fields.php — Partial: food entry fields shared by foods.php and the new-food modal in log.php.
 // Variables (set before including):
 //   $form_food  — associative array of current values, or []
 //   $prefix     — string prepended to all element IDs (e.g. 'nf-'), default ''
@@ -24,10 +24,10 @@ $autofocus = $autofocus ?? false;
            value="<?= htmlspecialchars($form_food['quantity_description'] ?? '') ?>">
 </div>
 <div class="form-group">
-    <label for="<?= $prefix ?>field-grams">Total grams <span style="color:var(--muted);font-weight:400">(for the above quantity)</span></label>
+    <label for="<?= $prefix ?>field-grams">Total grams <span style="color:var(--muted);font-weight:400">(optional — for the above quantity)</span></label>
     <input type="number" id="<?= $prefix ?>field-grams" name="grams"
            value="<?= isset($form_food['grams']) ? (float)$form_food['grams'] : '' ?>"
-           step="1" min="1" required placeholder="e.g. 245"
+           step="1" min="1" placeholder="e.g. 245"
            oninput="scaleNutrients('<?= $prefix ?>')">
 </div>
 <div class="form-row">

@@ -1,4 +1,5 @@
 <?php
+// reports.php — Weekly overview grid and day-detail meal list with nutrition totals.
 declare(strict_types=1);
 session_start();
 require_once __DIR__ . '/db.php';
@@ -38,9 +39,25 @@ $week_produce = array_sum(array_column($weekly, 'produce'));
 $week_has_empty = has_empty_meals((int)$person['id'], $week_start, $week_end);
 $day_has_empty  = has_empty_meals((int)$person['id'], $view_date, $view_date);
 
+// Days in this week that have planned meals
+$stmt_planned_days = $db->prepare("
+    SELECT DATE(eaten_at) AS day FROM meals
+    WHERE person_id = ? AND is_planned = 1
+      AND DATE(eaten_at) BETWEEN ? AND ?
+    GROUP BY DATE(eaten_at)
+");
+$stmt_planned_days->execute([$person['id'], $week_start, $week_end]);
+// array_flip converts the list of dates to a hash set — isset() is O(1) vs in_array() O(n)
+$planned_days = array_flip($stmt_planned_days->fetchAll(PDO::FETCH_COLUMN));
+
+// Any planned meals beyond this week's end (to show forward arrow)
+$stmt_fp = $db->prepare("SELECT COUNT(*) FROM meals WHERE person_id = ? AND is_planned = 1 AND DATE(eaten_at) > ?");
+$stmt_fp->execute([$person['id'], $week_end]);
+$has_future_planned = (int)$stmt_fp->fetchColumn() > 0;
+
 // Meals for selected day
 $stmt = $db->prepare("
-    SELECT m.id, m.eaten_at, m.notes,
+    SELECT m.id, m.eaten_at, m.notes, m.is_planned,
            COALESCE(SUM(f.grams_fiber * mi.portion_multiplier), 0) AS fiber,
            COALESCE(SUM(f.grams_protein * mi.portion_multiplier), 0) AS protein,
            COALESCE(SUM(f.servings_produce * mi.portion_multiplier), 0) AS produce,
@@ -79,7 +96,7 @@ page_header('Reports', 'reports');
         <span style="font-weight:600;font-size:.95rem">
             <?= date('M j', strtotime($week_start)) ?> – <?= date('M j, Y', strtotime($week_end)) ?>
         </span>
-        <?php if ($week_offset < 0): ?>
+        <?php if ($week_offset < 0 || $has_future_planned): ?>
             <a href="reports.php?w=<?= $week_offset + 1 ?><?= u_amp() ?>" class="btn btn-secondary btn-sm">Next →</a>
         <?php else: ?>
             <span style="width:64px"></span>
@@ -95,6 +112,7 @@ page_header('Reports', 'reports');
             $is_selected = $d === $view_date;
             $has_data = isset($by_day[$d]);
             $day_empty = has_empty_meals((int)$person['id'], $d, $d);
+            $day_planned = isset($planned_days[$d]);
             ?>
             <a href="reports.php?w=<?= $week_offset ?>&date=<?= $d ?><?= u_amp() ?>"
                style="text-decoration:none;text-align:center;padding:6px 2px;border-radius:8px;
@@ -104,6 +122,8 @@ page_header('Reports', 'reports');
                 <div style="font-size:.85rem;font-weight:<?= $is_today ? '700' : '500' ?>;color:var(--text)"><?= date('j', strtotime($d)) ?></div>
                 <?php if ($day_empty): ?>
                     <div style="font-size:.75rem"><span role="img" aria-label="Warning: missing meal data">⚠️</span></div>
+                <?php elseif ($day_planned): ?>
+                    <div style="width:6px;height:6px;border-radius:50%;border:2px solid #1a5276;margin:2px auto 0" title="Planned"></div>
                 <?php elseif ($has_data): ?>
                     <div style="width:6px;height:6px;border-radius:50%;background:var(--accent);margin:2px auto 0"></div>
                 <?php else: ?>
@@ -149,37 +169,7 @@ page_header('Reports', 'reports');
         <p class="empty" style="margin-top:12px">No meals logged.</p>
     <?php else: ?>
         <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px">
-        <?php foreach ($day_meals as $meal): ?>
-            <div class="meal-item">
-                <div style="flex:1">
-                    <div class="food-name">
-                        <?= date('g:i a', strtotime($meal['eaten_at'])) ?>
-                        <?php if ($meal['notes']): ?>
-                            — <span style="color:var(--muted);font-size:.9rem"><?= htmlspecialchars($meal['notes']) ?></span>
-                        <?php endif; ?>
-                        <?php if ($meal['item_count'] == 0): ?>
-                            <span role="img" aria-label="Warning: no foods logged for this meal, calculations do not include this meal"
-                                  style="cursor:help;font-size:.9rem;margin-left:4px">⚠️</span>
-                        <?php endif; ?>
-                    </div>
-                    <?php if (!empty($meal_foods[$meal['id']])): ?>
-                    <div style="font-size:.75rem;color:var(--muted);margin:3px 0 5px;line-height:1.5">
-                        <?php $parts = []; foreach ($meal_foods[$meal['id']] as $fi):
-                            $label = htmlspecialchars($fi['name']);
-                            if ((float)$fi['portion_multiplier'] != 1.0) $label .= ' ×' . rtrim(rtrim(number_format((float)$fi['portion_multiplier'], 1), '0'), '.');
-                            $parts[] = $label;
-                        endforeach; echo implode(', ', $parts); ?>
-                    </div>
-                    <?php endif; ?>
-                    <div class="nutrition-pills">
-                        <span class="pill pill-fiber"><?= round($meal['fiber'], 2) ?>g fiber</span>
-                        <span class="pill pill-protein"><?= round($meal['protein'], 2) ?>g protein</span>
-                        <span class="pill pill-produce"><?= round($meal['produce'], 2) ?> produce</span>
-                    </div>
-                </div>
-                <a href="log.php?edit=<?= $meal['id'] ?><?= u_amp() ?>" class="btn btn-secondary btn-sm">Edit</a>
-            </div>
-        <?php endforeach; ?>
+        <?php foreach ($day_meals as $meal): include __DIR__ . '/_meal_row.php'; endforeach; ?>
         </div>
     <?php endif; ?>
 </div>

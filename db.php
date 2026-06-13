@@ -1,4 +1,6 @@
 <?php
+// db.php — PDO setup, schema init, CSRF helpers, shared query utilities.
+// Included by every page. Provides get_db(), get_active_person(), and helper functions.
 declare(strict_types=1);
 
 // Session hardening — set before any session_start() call in the including file
@@ -22,6 +24,7 @@ if (file_exists($_config_path)) {
 }
 
 // ── CSRF helpers ─────────────────────────────────────────────────
+/** Returns (and lazily creates) the session CSRF token. */
 function csrf_token(): string {
     if (empty($_SESSION['csrf_token'])) {
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
@@ -29,10 +32,12 @@ function csrf_token(): string {
     return $_SESSION['csrf_token'];
 }
 
+/** Renders a hidden CSRF input for use inside HTML forms. */
 function csrf_field(): string {
     return '<input type="hidden" name="csrf_token" value="' . csrf_token() . '">';
 }
 
+/** Verifies the CSRF token from POST body or X-CSRF-Token header; exits 403 on failure. */
 function csrf_verify(): void {
     $post   = $_POST['csrf_token']               ?? '';
     $header = $_SERVER['HTTP_X_CSRF_TOKEN']      ?? '';
@@ -43,6 +48,10 @@ function csrf_verify(): void {
     }
 }
 
+/**
+ * Returns a PDO singleton connected to data/diet.db.
+ * Creates the data/ directory and initializes the schema on first call.
+ */
 function get_db(): PDO {
     static $db = null;
     if ($db === null) {
@@ -59,18 +68,23 @@ function get_db(): PDO {
     return $db;
 }
 
+/** Runs schema.sql to create tables if they don't exist. Called once per request by get_db(). */
 function init_schema(PDO $db): void {
     $db->exec(file_get_contents(__DIR__ . '/schema.sql'));
-    // Migrations for columns added after initial release
-    try { $db->exec("ALTER TABLE people ADD COLUMN header_color TEXT DEFAULT '#2d6a4f'"); } catch (PDOException) {}
 }
 
+/**
+ * Returns the active person row, falling back to the first person in the database.
+ * Sets $_SESSION['person_id']; regenerates the session ID when switching users.
+ * @return array|null  Person row, or null if no people exist yet.
+ */
 function get_active_person(): ?array {
     $db = get_db();
     // ?u= in URL sets the active person and is bookmarkable
     if (!empty($_GET['u']) && ctype_digit((string)$_GET['u'])) {
         $id = (int)$_GET['u'];
         if ($id > 0 && $id !== (int)($_SESSION['person_id'] ?? 0)) {
+            // Prevents session fixation when switching to a different person via ?u=
             session_regenerate_id(true);
         }
         $_SESSION['person_id'] = $id;
@@ -90,24 +104,29 @@ function get_active_person(): ?array {
     return $person ?: null;
 }
 
-// Returns "u=X" string (no leading ?) for use in URLs
+/** Returns "u=X" string (no leading ?) for use in URLs. */
 function u_param(): string {
     $person = get_active_person();
     return $person ? 'u=' . $person['id'] : '';
 }
 
-// Returns "?u=X" or "" for use when building hrefs
+/** Returns "?u=X" or "" for use when building hrefs. */
 function u_qs(): string {
     $p = u_param();
     return $p ? '?' . $p : '';
 }
 
-// Returns "&u=X" or "" for appending to existing query strings
+/** Returns "&u=X" or "" for appending to existing query strings. */
 function u_amp(): string {
     $p = u_param();
     return $p ? '&' . $p : '';
 }
 
+/**
+ * Computes total fiber, protein, and produce consumed on a given date,
+ * across all meals and food items for the person.
+ * @return array{fiber: float, protein: float, produce: float}
+ */
 function daily_totals(int $person_id, string $date): array {
     $db = get_db();
     $stmt = $db->prepare("
@@ -125,6 +144,10 @@ function daily_totals(int $person_id, string $date): array {
     return $stmt->fetch();
 }
 
+/**
+ * Returns per-day nutrition totals for the 7 days starting at $week_start (Monday).
+ * @return array[]  Each row: {day: string, fiber: float, protein: float, produce: float}
+ */
 function weekly_totals(int $person_id, string $week_start): array {
     $db = get_db();
     $week_end = date('Y-m-d', strtotime($week_start . ' +6 days'));
@@ -146,6 +169,10 @@ function weekly_totals(int $person_id, string $week_start): array {
     return $stmt->fetchAll();
 }
 
+/**
+ * Returns true if any meal in the date range has no associated food items.
+ * Used to display a warning that day/week totals may be incomplete.
+ */
 function has_empty_meals(int $person_id, string $date_start, string $date_end): bool {
     $db = get_db();
     $stmt = $db->prepare("
@@ -153,12 +180,9 @@ function has_empty_meals(int $person_id, string $date_start, string $date_end): 
         LEFT JOIN meal_items mi ON mi.meal_id = m.id
         WHERE m.person_id = ?
           AND DATE(m.eaten_at) BETWEEN ? AND ?
-          AND mi.id IS NULL
+          AND mi.id IS NULL  -- LEFT JOIN with IS NULL finds meals that have no items
     ");
     $stmt->execute([$person_id, $date_start, $date_end]);
     return (int)$stmt->fetchColumn() > 0;
 }
 
-function food_types(): array {
-    return ['carb', 'component', 'dairy', 'fiber', 'legume', 'meal', 'meat', 'produce', 'protein', 'snack', 'starch', 'whole grain'];
-}

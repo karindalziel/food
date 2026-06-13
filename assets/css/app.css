@@ -13,6 +13,8 @@
     --warn: #f4a261;
     --radius: 10px;
     --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+    --planned-bg: #e8f4ff;
+    --planned-color: #1a5276;
 }
 
 body {
@@ -193,18 +195,6 @@ tr:last-child td { border-bottom: none; }
 }
 .fab:hover { background: #1b4332; color: #fff; text-decoration: none; }
 
-.type-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.type-chip {
-    padding: 4px 10px;
-    border-radius: 99px;
-    font-size: 0.8rem;
-    border: 1px solid var(--border);
-    cursor: pointer;
-    background: var(--surface);
-    color: var(--muted);
-    user-select: none;
-}
-.type-chip.selected { background: var(--primary-light); border-color: var(--accent); color: var(--primary); font-weight: 500; }
 
 .search-results {
     position: absolute;

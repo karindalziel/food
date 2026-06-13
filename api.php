@@ -1,4 +1,5 @@
 <?php
+// api.php — Internal JSON API: food/template search, USDA proxy, food save, food list.
 declare(strict_types=1);
 session_start();
 require_once __DIR__ . '/db.php';
@@ -11,7 +12,7 @@ if ($action === 'search_foods') {
     $q = '%' . trim($_GET['q'] ?? '') . '%';
     $db = get_db();
     $stmt = $db->prepare("
-        SELECT id, name, types, quantity_description, grams, grams_fiber, grams_protein, servings_produce
+        SELECT id, name, quantity_description, grams, grams_fiber, grams_protein, servings_produce
         FROM foods WHERE name LIKE ? ORDER BY name LIMIT 20
     ");
     $stmt->execute([$q]);
@@ -39,6 +40,7 @@ if ($action === 'usda_search') {
     foreach ($foods as $f) {
         $fiber = 0; $protein = 0;
         foreach ($f['foodNutrients'] ?? [] as $n) {
+            // USDA nutrient IDs: 1079 = dietary fiber, 1003 = protein
             if (($n['nutrientId'] ?? 0) == 1079) $fiber   = (float)($n['value'] ?? 0);
             if (($n['nutrientId'] ?? 0) == 1003) $protein = (float)($n['value'] ?? 0);
         }
@@ -71,11 +73,10 @@ if ($action === 'save_food' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $errors = [];
     if (!$name) $errors[] = 'Name is required.';
-    if ($grams === null || $grams <= 0) $errors[] = 'Total grams is required.';
     if ($errors) { echo json_encode(['errors' => $errors]); exit; }
 
     $db = get_db();
-    $db->prepare("INSERT INTO foods (name, types, quantity_description, grams, grams_fiber, grams_protein, servings_produce) VALUES (?, '[]', ?, ?, ?, ?, ?)")
+    $db->prepare("INSERT INTO foods (name, quantity_description, grams, grams_fiber, grams_protein, servings_produce) VALUES (?, ?, ?, ?, ?, ?)")
        ->execute([$name, $qty_desc ?: null, $grams, $fiber, $protein, $produce]);
     $id = (int)$db->lastInsertId();
 

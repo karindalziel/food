@@ -1,4 +1,5 @@
 <?php
+// foods.php — Food library: browse, create, and edit foods with optional USDA lookup.
 declare(strict_types=1);
 session_start();
 require_once __DIR__ . '/db.php';
@@ -42,12 +43,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $produce  = (float)($_POST['servings_produce'] ?? 0);
 
         if (!$name) { $errors[] = 'Name is required.'; }
-        if ($grams === null || $grams <= 0) { $errors[] = 'Total grams is required.'; }
 
         if (empty($errors)) {
             if ($edit_id) {
                 $db->prepare("
-                    UPDATE foods SET name=?, types='[]', quantity_description=?, grams=?,
+                    UPDATE foods SET name=?, quantity_description=?, grams=?,
                            grams_fiber=?, grams_protein=?, servings_produce=?
                     WHERE id=?
                 ")->execute([$name, $qty_desc ?: null, $grams, $fiber, $protein, $produce, $edit_id]);
@@ -57,8 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $food = $stmt->fetch();
             } else {
                 $db->prepare("
-                    INSERT INTO foods (name, types, quantity_description, grams, grams_fiber, grams_protein, servings_produce)
-                    VALUES (?, '[]', ?, ?, ?, ?, ?)
+                    INSERT INTO foods (name, quantity_description, grams, grams_fiber, grams_protein, servings_produce)
+                    VALUES (?, ?, ?, ?, ?, ?)
                 ")->execute([$name, $qty_desc ?: null, $grams, $fiber, $protein, $produce]);
                 header('Location: foods.php?saved=1' . u_amp());
                 exit;
@@ -172,7 +172,7 @@ initUsdaSearch('usda-search', 'usda-results', 'usda-status', '');
                             <div style="font-size:.75rem;color:var(--muted)"><?= htmlspecialchars($f['quantity_description']) ?></div>
                         <?php endif; ?>
                     </td>
-                    <td style="text-align:right"><?= round($f['grams'], 1) ?>g</td>
+                    <td style="text-align:right"><?= $f['grams'] !== null ? round($f['grams'], 1).'g' : '—' ?></td>
                     <td style="text-align:right"><?= round($f['grams_fiber'], 1) ?>g</td>
                     <td style="text-align:right"><?= round($f['grams_protein'], 1) ?>g</td>
                     <td style="text-align:right"><?= round($f['servings_produce'], 1) ?></td>
@@ -192,7 +192,7 @@ initUsdaSearch('usda-search', 'usda-results', 'usda-status', '');
                     <?php endif; ?>
                 </div>
                 <div class="food-card-stats">
-                    <span><?= round($f['grams'], 1) ?>g</span>
+                    <?php if ($f['grams'] !== null): ?><span><?= round($f['grams'], 1) ?>g</span><?php endif; ?>
                     · <span><?= round($f['grams_fiber'], 1) ?>g</span> fib
                     · <span><?= round($f['grams_protein'], 1) ?>g</span> pro
                     <?php if ($f['servings_produce'] > 0): ?>

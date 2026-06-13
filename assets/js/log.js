@@ -1,3 +1,15 @@
+// ── Planned meal notice ──────────────────────────────────────────
+function initPlannedNotice(nowStr) {
+    const eatenAt = document.getElementById('eaten_at');
+    const notice  = document.getElementById('planned-notice');
+    if (!eatenAt || !notice) return;
+    function checkPlanned() {
+        notice.style.display = eatenAt.value && eatenAt.value > nowStr ? 'block' : 'none';
+    }
+    eatenAt.addEventListener('change', checkPlanned);
+    checkPlanned();
+}
+
 // ── Template search ──────────────────────────────────────────────
 const tSearch  = document.getElementById('template-search');
 const tResults = document.getElementById('template-results');
@@ -85,23 +97,24 @@ function addFoodRow(f, portion) {
                     <span class="pill pill-produce">${(f.servings_produce*m).toFixed(1)} produce</span>
                 </div>
             </div>
-            <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;min-width:155px">
+            <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;min-width:${baseG > 0 ? '155px' : '90px'}">
                 <div style="display:flex;gap:4px;align-items:center">
                     <input type="number" name="portion[]" value="${m}"
                            step="0.1" min="0.1"
-                           style="width:72px;padding:8px 6px;border:1px solid var(--border);border-radius:6px 0 0 6px;font-size:.9rem;text-align:center;border-right:none"
+                           style="width:72px;padding:8px 6px;border:1px solid var(--border);border-radius:${baseG > 0 ? '6px 0 0 6px' : '6px'};font-size:.9rem;text-align:center;${baseG > 0 ? 'border-right:none' : ''}"
                            data-fiber="${f.grams_fiber}" data-protein="${f.grams_protein}"
                            data-produce="${f.servings_produce}" data-base-grams="${baseG}"
                            data-row="${i}" oninput="portionChanged(this)"
                            aria-label="Portion multiplier for ${escHtml(f.name)}">
+                    ${baseG > 0 ? `
                     <span aria-hidden="true" style="padding:6px 4px;border:1px solid var(--border);border-left:none;border-right:none;font-size:.8rem;color:var(--muted);background:#f8f9fa">×</span>
                     <input type="number" id="grams-${i}" value="${itemG}"
                            step="0.1" min="0"
                            style="width:72px;padding:8px 6px;border:1px solid var(--border);border-radius:0 6px 6px 0;font-size:.9rem;text-align:center"
                            data-row="${i}" oninput="gramsChanged(this)"
-                           placeholder="g" aria-label="Grams for ${escHtml(f.name)}">
+                           placeholder="g" aria-label="Grams for ${escHtml(f.name)}">` : ''}
                 </div>
-                <div style="font-size:.7rem;color:var(--muted);text-align:right">portion × &nbsp;|&nbsp; grams</div>
+                <div style="font-size:.7rem;color:var(--muted);text-align:right">${baseG > 0 ? 'portion × &nbsp;|&nbsp; grams' : 'portion'}</div>
                 <button type="button" class="btn btn-danger btn-sm" onclick="removeRow(this)">Remove</button>
             </div>
         </div>`;

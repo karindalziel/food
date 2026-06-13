@@ -1,4 +1,5 @@
 <?php
+// settings.php — Per-person profile, daily goals, named meals, USDA API key, and data links.
 declare(strict_types=1);
 session_start();
 require_once __DIR__ . '/db.php';
@@ -142,7 +143,10 @@ page_header('Settings', 'settings');
                    required <?= $new_person ? 'autofocus' : '' ?>>
         </div>
 
-        <div style="font-size:.85rem;color:var(--muted);font-weight:600;margin-bottom:10px">Daily Goals</div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px">
+            <div style="font-size:.85rem;color:var(--muted);font-weight:600">Daily Goals</div>
+            <a href="https://www.nal.usda.gov/human-nutrition-and-food-safety/dri-calculator" target="_blank" rel="noopener" style="font-size:.78rem">DRI Calculator</a>
+        </div>
         <div class="form-row">
             <div class="form-group">
                 <label for="goal-fiber">Fiber (g)</label>
