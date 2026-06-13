@@ -2,6 +2,8 @@
 
 A personal diet tracking web app built with PHP and SQLite. Log meals, track fiber, protein, and produce against daily goals, and look up nutrition data from the USDA food database. Designed to run on shared PHP hosting with no additional software required.
 
+The intent is for app to be loaded into a password protected folder.
+
 ---
 
 ## Requirements
