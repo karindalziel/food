@@ -1,0 +1,50 @@
+CREATE TABLE IF NOT EXISTS people (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    goal_fiber_g REAL DEFAULT 0,
+    goal_protein_g REAL DEFAULT 0,
+    goal_produce_servings REAL DEFAULT 0,
+    header_color TEXT DEFAULT '#2d6a4f',
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS foods (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    types TEXT DEFAULT '[]',
+    quantity_description TEXT,
+    grams REAL NOT NULL DEFAULT 0,
+    grams_fiber REAL DEFAULT 0,
+    grams_protein REAL DEFAULT 0,
+    servings_produce REAL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS meals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    person_id INTEGER NOT NULL REFERENCES people(id),
+    eaten_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS meal_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    meal_id INTEGER NOT NULL REFERENCES meals(id) ON DELETE CASCADE,
+    food_id INTEGER NOT NULL REFERENCES foods(id),
+    portion_multiplier REAL NOT NULL DEFAULT 1.0
+);
+
+CREATE TABLE IF NOT EXISTS meal_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS meal_template_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER NOT NULL REFERENCES meal_templates(id) ON DELETE CASCADE,
+    food_id INTEGER NOT NULL REFERENCES foods(id),
+    portion_multiplier REAL NOT NULL DEFAULT 1.0
+);
