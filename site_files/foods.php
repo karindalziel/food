@@ -68,11 +68,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $search = trim($_GET['s'] ?? '');
+
+// Sorting
+$sort_cols = ['name' => 'LOWER(name)', 'grams' => 'grams', 'grams_fiber' => 'grams_fiber', 'grams_protein' => 'grams_protein', 'servings_produce' => 'servings_produce'];
+$sort      = isset($sort_cols[$_GET['sort'] ?? '']) ? $_GET['sort'] : 'name';
+$dir       = strtoupper($_GET['dir'] ?? '') === 'DESC' ? 'DESC' : 'ASC';
+$order_sql = $sort_cols[$sort] . ' ' . $dir;
+
 if ($search) {
-    $stmt = $db->prepare("SELECT * FROM foods WHERE name LIKE ? ORDER BY name");
+    $stmt = $db->prepare("SELECT * FROM foods WHERE name LIKE ? ORDER BY $order_sql");
     $stmt->execute(['%' . $search . '%']);
 } else {
-    $stmt = $db->query("SELECT * FROM foods ORDER BY name");
+    $stmt = $db->query("SELECT * FROM foods ORDER BY $order_sql");
 }
 $foods = $stmt->fetchAll();
 
@@ -152,15 +159,28 @@ initUsdaSearch('usda-search', 'usda-results', 'usda-status', '');
         <p class="empty">No foods yet. <a href="foods.php?new=1">Add one</a>.</p>
     <?php else: ?>
 
+        <?php
+        // Build a sort link for a column header
+        function sort_link(string $col, string $label, string $cur_sort, string $cur_dir, string $search, bool $right = false): string {
+            $next_dir = ($cur_sort === $col && $cur_dir === 'ASC') ? 'DESC' : 'ASC';
+            $arrow = '';
+            if ($cur_sort === $col) {
+                $arrow = $cur_dir === 'ASC' ? ' ▲' : ' ▼';
+            }
+            $params = http_build_query(array_filter(['s' => $search, 'sort' => $col, 'dir' => $next_dir]));
+            $style  = 'white-space:nowrap' . ($right ? ';text-align:right' : '');
+            return '<th style="' . $style . '"><a href="foods.php?' . htmlspecialchars($params) . '" class="sort-link">' . htmlspecialchars($label) . $arrow . '</a></th>';
+        }
+        ?>
         <!-- Table: wider screens -->
         <table class="foods-table">
             <thead>
                 <tr>
-                    <th>Name</th>
-                    <th style="text-align:right">Grams</th>
-                    <th style="text-align:right">Fiber</th>
-                    <th style="text-align:right">Protein</th>
-                    <th style="text-align:right">Produce</th>
+                    <?= sort_link('name',            'Name',    $sort, $dir, $search) ?>
+                    <?= sort_link('grams',           'Grams',   $sort, $dir, $search, true) ?>
+                    <?= sort_link('grams_fiber',     'Fiber',   $sort, $dir, $search, true) ?>
+                    <?= sort_link('grams_protein',   'Protein', $sort, $dir, $search, true) ?>
+                    <?= sort_link('servings_produce','Produce', $sort, $dir, $search, true) ?>
                 </tr>
             </thead>
             <tbody>

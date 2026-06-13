@@ -141,9 +141,13 @@ page_header('Reports', 'reports');
                 <span role="img" aria-label="Warning: calculations do not include missing meal data" style="cursor:help;font-size:1rem">⚠️</span>
             <?php endif; ?>
         </div>
-        <?php goal_bar('Fiber', $week_fiber, $person['goal_fiber_g'] * 7, 'g', 'fiber'); ?>
-        <?php goal_bar('Protein', $week_protein, $person['goal_protein_g'] * 7, 'g', 'protein'); ?>
-        <?php goal_bar('Produce', $week_produce, $person['goal_produce_servings'] * 7, 'srv', 'produce'); ?>
+        <?php
+        $goals_missing  = !goal_bar('Fiber',   $week_fiber,   $person['goal_fiber_g'] * 7,         'g',   'fiber');
+        $goals_missing |= !goal_bar('Protein', $week_protein, $person['goal_protein_g'] * 7,       'g',   'protein');
+        $goals_missing |= !goal_bar('Produce', $week_produce, $person['goal_produce_servings'] * 7, 'srv', 'produce');
+        if ($goals_missing): ?>
+            <p class="goals-missing-note">Some goals are not set. <a href="settings.php">Configure in Settings</a>.</p>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -161,9 +165,11 @@ page_header('Reports', 'reports');
         <?php endif; ?>
     </div>
 
-    <?php goal_bar('Fiber', (float)$day_totals['fiber'], (float)$person['goal_fiber_g'], 'g', 'fiber'); ?>
-    <?php goal_bar('Protein', (float)$day_totals['protein'], (float)$person['goal_protein_g'], 'g', 'protein'); ?>
-    <?php goal_bar('Produce', (float)$day_totals['produce'], (float)$person['goal_produce_servings'], 'srv', 'produce'); ?>
+    <?php
+    goal_bar('Fiber',   (float)$day_totals['fiber'],   (float)$person['goal_fiber_g'],         'g',   'fiber');
+    goal_bar('Protein', (float)$day_totals['protein'], (float)$person['goal_protein_g'],       'g',   'protein');
+    goal_bar('Produce', (float)$day_totals['produce'], (float)$person['goal_produce_servings'], 'srv', 'produce');
+    ?>
 
     <?php if (empty($day_meals)): ?>
         <p class="empty" style="margin-top:12px">No meals logged.</p>

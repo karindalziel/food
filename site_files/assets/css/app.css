@@ -11,6 +11,12 @@
     --accent: #52b788;
     --danger: #e63946;
     --warn: #f4a261;
+    --bar-1: #e63946;
+    --bar-2: #f4a261;
+    --bar-3: #f9c74f;
+    --bar-4: #90be6d;
+    --bar-5: #52b788;
+    --bar-complete: #2d6a4f;
     --radius: 10px;
     --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
     --planned-bg: #e8f4ff;
@@ -99,9 +105,13 @@ main { max-width: 600px; margin: 0 auto; padding: 16px; }
 .goal-bar-label { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 4px; }
 .goal-bar-label .value { font-weight: 600; }
 .bar-track { background: var(--border); border-radius: 99px; height: 10px; overflow: hidden; }
-.bar-fill { height: 100%; border-radius: 99px; background: var(--accent); transition: width .3s; }
-.bar-fill.over { background: var(--primary); }
-.bar-fill.warn { background: var(--warn); }
+.bar-fill { height: 100%; border-radius: 99px; background: var(--bar-1); transition: width .3s; }
+.bar-fill.bar-l2 { background: var(--bar-2); }
+.bar-fill.bar-l3 { background: var(--bar-3); }
+.bar-fill.bar-l4 { background: var(--bar-4); }
+.bar-fill.bar-l5 { background: var(--bar-5); }
+.bar-fill.bar-complete { background: var(--bar-complete); }
+.goals-missing-note { font-size: 0.8rem; color: var(--muted); margin-top: 6px; }
 
 .btn {
     display: inline-flex; align-items: center; gap: 6px;
@@ -252,6 +262,9 @@ tr:last-child td { border-bottom: none; }
 .foods-toolbar input { min-width: 0; }
 
 .foods-table { width: 100%; }
+.foods-table th { padding-bottom: 4px; }
+.sort-link { text-decoration: none; color: inherit; font-weight: 600; }
+.sort-link:hover { text-decoration: underline; }
 .foods-cards  { display: none; }
 
 @media (max-width: 500px) {

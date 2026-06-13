@@ -46,7 +46,9 @@ $stmt = $db->prepare("
 $stmt->execute($params);
 $rows = $stmt->fetchAll();
 
-$filename = 'diet_export';
+$person_slug = preg_replace('/[^a-z0-9]+/', '_', strtolower($person['name']));
+$exported_at = date('Y-m-d_Hi');
+$filename = "diet_export_{$person_slug}_{$exported_at}";
 if ($start && $end) { $filename .= "__{$start}_{$end}"; }
 $filename .= '.csv';
 

@@ -75,10 +75,24 @@ function page_footer(string $active = ''): void {
 <?php
 }
 
-function goal_bar(string $label, float $value, float $goal, string $unit, string $type): void {
-    $pct = $goal > 0 ? min(($value / $goal) * 100, 100) : 0;
-    $over = $goal > 0 && $value >= $goal;
-    $class = $over ? 'over' : ($pct >= 75 ? '' : 'warn');
+// Returns false if goal is not set (so callers can show a single "set your goals" note).
+function goal_bar(string $label, float $value, float $goal, string $unit, string $type): bool {
+    if ($goal <= 0) { ?>
+    <div class="goal-bar">
+        <div class="goal-bar-label">
+            <span><?= htmlspecialchars($label) ?></span>
+            <span class="value"><?= round($value, 2) ?> <?= htmlspecialchars($unit) ?></span>
+        </div>
+    </div>
+    <?php return false; }
+    $pct = min(($value / $goal) * 100, 100);
+    $over = $value >= $goal;
+    if ($over)         { $class = 'bar-complete'; }
+    elseif ($pct > 80) { $class = 'bar-l5'; }
+    elseif ($pct > 60) { $class = 'bar-l4'; }
+    elseif ($pct > 40) { $class = 'bar-l3'; }
+    elseif ($pct > 20) { $class = 'bar-l2'; }
+    else               { $class = ''; }
     ?>
     <div class="goal-bar">
         <div class="goal-bar-label">
@@ -90,4 +104,5 @@ function goal_bar(string $label, float $value, float $goal, string $unit, string
         </div>
     </div>
     <?php
+    return true;
 }

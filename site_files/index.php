@@ -57,9 +57,13 @@ page_header('Today', 'today');
             <span role="img" aria-label="Warning: calculations do not include missing meal data" style="cursor:help;font-size:1.1rem">⚠️</span>
         <?php endif; ?>
     </div>
-    <?php goal_bar('Fiber', (float)$totals['fiber'], (float)$person['goal_fiber_g'], 'g', 'fiber'); ?>
-    <?php goal_bar('Protein', (float)$totals['protein'], (float)$person['goal_protein_g'], 'g', 'protein'); ?>
-    <?php goal_bar('Produce', (float)$totals['produce'], (float)$person['goal_produce_servings'], 'srv', 'produce'); ?>
+    <?php
+    $goals_missing  = !goal_bar('Fiber',   (float)$totals['fiber'],   (float)$person['goal_fiber_g'],         'g',   'fiber');
+    $goals_missing |= !goal_bar('Protein', (float)$totals['protein'], (float)$person['goal_protein_g'],       'g',   'protein');
+    $goals_missing |= !goal_bar('Produce', (float)$totals['produce'], (float)$person['goal_produce_servings'], 'srv', 'produce');
+    if ($goals_missing): ?>
+        <p class="goals-missing-note">Some goals are not set. <a href="settings.php">Configure in Settings</a>.</p>
+    <?php endif; ?>
 </div>
 
 <div class="card">
