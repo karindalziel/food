@@ -8,6 +8,12 @@ header('Content-Type: application/json');
 
 $action = $_GET['action'] ?? '';
 
+// Returns a fresh CSRF token so JS can update stale forms after the tab is restored.
+if ($action === 'csrf_refresh') {
+    echo json_encode(['csrf_token' => csrf_token()]);
+    exit;
+}
+
 if ($action === 'search_foods') {
     $q = '%' . trim($_GET['q'] ?? '') . '%';
     $db = get_db();

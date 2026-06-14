@@ -6,7 +6,7 @@ declare(strict_types=1);
 // Session hardening — set before any session_start() call in the including file
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
-        'lifetime' => 0,
+        'lifetime' => 2592000, // 30 days — prevents stale-token errors on mobile
         'path'     => '/',
         'httponly' => true,
         'samesite' => 'Strict',
@@ -37,14 +37,33 @@ function csrf_field(): string {
     return '<input type="hidden" name="csrf_token" value="' . csrf_token() . '">';
 }
 
-/** Verifies the CSRF token from POST body or X-CSRF-Token header; exits 403 on failure. */
+/** Verifies the CSRF token from POST body or X-CSRF-Token header; shows friendly error on failure. */
 function csrf_verify(): void {
-    $post   = $_POST['csrf_token']               ?? '';
-    $header = $_SERVER['HTTP_X_CSRF_TOKEN']      ?? '';
+    $post   = $_POST['csrf_token']          ?? '';
+    $header = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
     $token  = $post !== '' ? $post : $header;
     if (!isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $token)) {
         http_response_code(403);
-        exit('Invalid CSRF token');
+        // JSON callers get a terse error; browser form submissions get a helpful page
+        if (($header !== '' && $post === '') || (($_SERVER['HTTP_ACCEPT'] ?? '') === 'application/json')) {
+            header('Content-Type: application/json');
+            exit(json_encode(['error' => 'Session expired. Please refresh and try again.']));
+        }
+        ?><!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Session Expired</title>
+<style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f8f9fa}
+.box{background:#fff;border-radius:12px;padding:32px 28px;max-width:360px;text-align:center;box-shadow:0 2px 12px rgba(0,0,0,.1)}
+h1{font-size:1.2rem;margin:0 0 12px}p{color:#555;margin:0 0 20px;line-height:1.5}
+a{display:inline-block;padding:10px 24px;background:#2d6a4f;color:#fff;border-radius:8px;text-decoration:none;font-weight:600}
+</style></head><body>
+<div class="box">
+    <h1>Session Expired</h1>
+    <p>Your session timed out while the page was open. Press back to return to your form — your entries may still be there.</p>
+    <a href="javascript:history.back()">Go Back</a>
+</div>
+</body></html><?php
+        exit;
     }
 }
 

@@ -67,6 +67,21 @@ function initUsdaSearch(inputId, resultsId, statusId, prefix) {
     inputEl.addEventListener('blur', () => setTimeout(() => { resultsEl.style.display = 'none'; }, 180));
 }
 
+// When the tab comes back to foreground, silently refresh the CSRF token so stale
+// cached pages (common on mobile home-screen bookmarks) don't hit a 403 on submit.
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') return;
+    fetch('api.php?action=csrf_refresh')
+        .then(r => r.json())
+        .then(({ csrf_token }) => {
+            document.querySelectorAll('input[name="csrf_token"]')
+                    .forEach(el => el.value = csrf_token);
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            if (meta) meta.content = csrf_token;
+        })
+        .catch(() => {});
+});
+
 function ensureLocalDate() {
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
